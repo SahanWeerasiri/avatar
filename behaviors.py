@@ -25,6 +25,7 @@ class BehaviorManager:
         self.mode = "returning_to_corner"
         self.awake_time_left = 0.0
         self.state_time_left = 3.0
+        self.on_reminder_arrived = None
 
         # Start by walking to bottom-left corner to sleep
         self.character.state = "walk"
@@ -39,16 +40,27 @@ class BehaviorManager:
         self.awake_time_left = duration
         self.character.state = "happy" if reason == "user" else "idle"
         self.state_time_left = 3.0
+        self.on_reminder_arrived = None
         debug_log("BEHAVIOR", f"wake_up: mode '{prev_mode}' -> 'active' (reason='{reason}', duration={duration:.1f}s, character.state='{self.character.state}')")
 
-    def wake_up_for_reminder(self):
-        """Wake up avatar for a scheduled reminder."""
+    def wake_up_for_reminder(self, current_x=0.0, min_x=0.0):
+        """Wake up avatar for a scheduled reminder: walk out into view, then stay idle."""
         prev_mode = self.mode
-        self.mode = "waiting_reminder"
-        self.character.state = "idle"
-        self.character.facing_right = True
-        self.state_time_left = 999999
-        debug_log("BEHAVIOR", f"wake_up_for_reminder: mode '{prev_mode}' -> 'waiting_reminder' (standing idle for user interaction)")
+        reminder_target_x = min_x + 180.0
+
+        if current_x >= reminder_target_x - 30.0:
+            # Avatar is already out in open view
+            self.mode = "waiting_reminder"
+            self.character.state = "idle"
+            self.character.facing_right = True
+            debug_log("BEHAVIOR", f"wake_up_for_reminder: already in view (x={current_x:.1f}). Standing idle.")
+        else:
+            # Walk out from corner into desktop view
+            self.mode = "walking_for_reminder"
+            self.character.state = "walk"
+            self.direction = 1
+            self.character.facing_right = True
+            debug_log("BEHAVIOR", f"wake_up_for_reminder: mode '{prev_mode}' -> 'walking_for_reminder'. Walking right to x={reminder_target_x:.1f}")
 
     def on_reminder_dismissed(self):
         """User clicked an action on reminder bubble; return to corner to sleep."""
@@ -95,7 +107,28 @@ class BehaviorManager:
             self.character.state = "sleep"
             return 0.0
 
-        # MODE 2: Returning to bottom-left corner to sleep
+        # MODE 2: Walking out from corner to deliver reminder in clear view
+        elif self.mode == "walking_for_reminder":
+            reminder_target_x = min_x + 180.0
+            self.character.state = "walk"
+            self.direction = 1
+            self.character.facing_right = True
+
+            speed = self.walk_speed * 1.3
+            dx = speed * dt
+            next_x = current_x + dx
+
+            if next_x >= reminder_target_x:
+                # Arrived in view! Stand idle
+                self.mode = "waiting_reminder"
+                self.character.state = "idle"
+                self.character.facing_right = True
+                debug_log("BEHAVIOR", f"Arrived at reminder position (x={next_x:.1f}). Standing idle.")
+                return float(reminder_target_x - current_x)
+
+            return dx
+
+        # MODE 3: Returning to bottom-left corner to sleep
         elif self.mode == "returning_to_corner":
             self.character.state = "walk"
             self.direction = -1

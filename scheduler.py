@@ -142,6 +142,7 @@ class ScheduleManager:
         Returns list of tasks that have just triggered.
         Handles recurring task rollover.
         """
+        self.load_tasks()
         now = time.time()
         due_tasks = []
 

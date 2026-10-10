@@ -175,7 +175,6 @@ class AvatarWindow(QWidget):
             for t in due_tasks:
                 debug_log("REMINDER", f"Due task triggered: '{t.title}' (id={t.id}, category={t.category}). Presenting reminder bubble.")
                 self.active_reminder = True
-                self.behavior.wake_up_for_reminder()
                 for _ in range(5):
                     self.character.add_particle("sparkle")
 
@@ -201,7 +200,12 @@ class AvatarWindow(QWidget):
                     {"text": "Accept", "is_done": True, "callback": make_done_cb(t.id, t.title)},
                     {"text": "Snooze 5m", "is_snooze": True, "callback": make_snooze_cb(t.id, t.title)},
                 ]
-                # duration=0 keeps reminder window open indefinitely until user clicks!
+
+                # Wake up and walk out into plain view
+                self.behavior.wake_up_for_reminder(current_x=self.pos_x, min_x=min_x)
+
+                # Immediately present the reminder speech bubble and raise to topmost layer
+                self.raise_()
                 self.say(f"Time for: {t.title}!", title="⏰ Scheduled Reminder Due!", duration=0, actions=actions, force=True)
 
         # Update character animation state
@@ -215,7 +219,9 @@ class AvatarWindow(QWidget):
             return
         act_names = [a.get("text") for a in actions] if actions else None
         debug_log("SPEECH", f"Avatar saying: '{text}' (title={title}, duration={duration}, actions={act_names}, force={force})")
+        self.raise_()
         self.speech_bubble.show_message(text, title=title, duration=duration, actions=actions)
+        self.speech_bubble.raise_()
 
     def open_schedule_dialog(self):
         debug_log("UI_EVENT", "Opening Work & Reminder Scheduler dialog")

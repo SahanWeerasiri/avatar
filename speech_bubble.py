@@ -14,7 +14,7 @@ class SpeechBubbleWindow(QWidget):
     and keeping itself within visible screen boundaries above the avatar.
     """
     def __init__(self, parent_avatar=None):
-        super().__init__()
+        super().__init__(parent_avatar)
         self.avatar = parent_avatar
 
         self.setWindowFlags(
@@ -23,7 +23,7 @@ class SpeechBubbleWindow(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop, True)
 
         self.pointer_size = 10
         self.tail_x_offset = 0  # Position of tail relative to bubble
@@ -223,6 +223,7 @@ class SpeechBubbleWindow(QWidget):
 
         self.update_position()
         self.show()
+        self.raise_()
         debug_log("SPEECH", f"Speech bubble displayed: size={total_w}x{total_h}px, duration={duration}s, actions={len(actions) if actions else 0}")
 
         if duration and duration > 0:
@@ -263,6 +264,7 @@ class SpeechBubbleWindow(QWidget):
         self.tail_x_offset = max(18, min(bubble_w - 18, self.tail_x_offset))
 
         self.move(int(clamped_x), int(target_y))
+        self.raise_()
 
     def paintEvent(self, event):
         super().paintEvent(event)
